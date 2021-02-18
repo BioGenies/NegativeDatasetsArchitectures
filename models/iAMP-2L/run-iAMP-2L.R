@@ -48,7 +48,7 @@ results <- fknn(
   input_df_train %>% select(positive, negative) %>% as.matrix,
   input_df_test %>% select(-sq, -name, -positive, -negative) %>% as.matrix,
   k = 19,
-  m = 2)
+  m = 1.8)
 
 input_df_test %>%
   select(ID = name, target = positive) %>%
