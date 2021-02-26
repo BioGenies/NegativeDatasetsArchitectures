@@ -70,7 +70,7 @@ generate_features <- function(sequence_file) {
   # 20 features - amino acid composition
   aa_comp <- lapply(1:length(seqs), function(i) {
     data.frame(id = names(seqs[i]),
-               t(as.matrix(table(seqs[[i]])/20)))
+               t(as.matrix(table(seqs[[i]])/length(seqs[[i]]))))
   }) %>% bind_rows()
   aa_comp[is.na(aa_comp)] <- 0
   # 10 features - coefficients of grey model when amino acids are encoded 
