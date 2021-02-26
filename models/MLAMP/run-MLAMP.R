@@ -68,7 +68,7 @@ my_props <- data.frame(
 generate_features <- function(sequence_file) {
   seqs <- read_fasta(sequence_file)
   # 20 features - amino acid composition
-  aa_comp <- lapply(1:length(seqs), function(i) {
+  aa_comp <- lapply(seq_along(seqs), function(i) {
     data.frame(id = names(seqs[i]),
                t(as.matrix(table(seqs[[i]])/length(seqs[[i]]))))
   }) %>% bind_rows()
@@ -76,7 +76,7 @@ generate_features <- function(sequence_file) {
   # 10 features - coefficients of grey model when amino acids are encoded 
   # by numerical values of different properties
   gm_coefficients <- lapply(my_props[["AccNo"]], function(ith_prop) {
-    lapply(1:length(seqs), function(i) {
+    lapply(seq_along(seqs), function(i) {
       coeffs <- extractPAAC(x = paste(seqs[[i]], collapse = ""),
                             props = ith_prop,
                             customprops = my_props,
