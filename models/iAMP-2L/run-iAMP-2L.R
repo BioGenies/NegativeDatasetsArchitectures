@@ -21,11 +21,9 @@ custom_properties <- read.csv("models/iAMP-2L/PseAA.csv") %>%
   select(AccNo, A, R, N, D, C, E, Q, G, H, I, L, K, M, F, P, S, T, W, Y, V)
 
 prepare_features <- function(input_file) {
-  sequences_df <- read_fasta(input_file, alphabet = "ami_ext") %>%
-    mutate(sq = remove_ambiguous(sq)) %>%
-    filter(get_sq_lengths(sq) > 0) 
+  sequences_df <- read_fasta(input_file, alphabet = "ami_bsc")
   
-  sequences_df <- sequences_df %>%
+  sequences_df %>%
     pull(sq) %>%
     sqapply(protr::extractAPAAC, 
             lambda = 4, 
