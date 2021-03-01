@@ -1,15 +1,10 @@
 #!/usr/bin/env Rscript
 library(tidyverse)
 library(biogram)
-library(drake)
 library(ranger)
 library(tidyr)
-library(pbapply)
-library(xtable)
-library(pROC)
 library(stringi)
 library(data.table)
-#args <- commandArgs(trailingOnly = TRUE)
 #--------------------------------------------------FUNCTIONS
 
 #----get_mers
@@ -27,32 +22,6 @@ create_mer_df <- function(seq)
   }))
 
 
-get_mers <- function(pos, pos_id, neg, neg_id) {
-  seq_groups <- lapply(names(pos_id), function(i)
-    c(pos[pos_id[[i]][["traintest"]]], neg[neg_id[[i]][["traintest"]]])) %>% 
-    setNames(names(pos_id))
-  
-  
-  lapply(names(seq_groups), function(ith_group_id) {
-    ith_group <- seq_groups[[ith_group_id]]
-    
-    folded <- cvFolds(length(ith_group), K = 5)
-    fold_df <- data.frame(source_peptide = names(ith_group)[folded[["subsets"]]], 
-                          fold = folded[["which"]],
-                          stringsAsFactors = FALSE)
-    
-    ith_group %>% 
-      list2matrix() %>% 
-      create_mer_df %>% 
-      mutate(group = ith_group_id) %>% 
-      inner_join(fold_df, by = c("source_peptide" = "source_peptide"))
-  }) %>% 
-    do.call(rbind, .) %>% 
-    mutate(target = grepl("AMP", source_peptide, fixed = TRUE)) %T>% {
-      print(paste0("Number of AMP mers: ", nrow(filter(target == TRUE))))
-      print(paste0("Number of non-AMP mers: ", nrow(filter(target == FALSE))))
-    }
-}  
 #--------------------- peptydy (count ampgrams)
 
 count_ampgrams <- function(mer_df, ns, ds) {
@@ -124,28 +93,13 @@ training_data <- read_fasta(train_file) %>%
   list2matrix() %>% 
   create_mer_df()
 
-#training_data1 <- training_data[1:43318, ]
-#training_data2 <- training_data[43319:86637, ]
-#training_data3 <- training_data[86638:129952, ]
-
 ngrams12 <- count_ampgrams(training_data, ns = c(1, rep(2, 4)),ds = list(0, 0, 1, 2, 3))
 ngrams3_1 <-  count_ampgrams(training_data, ns = c(3, 3), ds = list(c(0, 0), c(0, 1)))
 ngrams3_2 <-  count_ampgrams(training_data, ns = c(3, 3), ds = list(c(1, 0), c(1, 1)))
-#ngrams3_1_1 <-  count_ampgrams(training_data1, ns = c(3, 3), ds = list(c(0, 0), c(0, 1)))
-#ngrams3_1_2 <-  count_ampgrams(training_data2, ns = c(3, 3), ds = list(c(0, 0), c(0, 1)))
-#ngrams3_1_3 <-  count_ampgrams(training_data3, ns = c(3, 3), ds = list(c(0, 0), c(0, 1)))
-
-#ngrams3_2_1 <-  count_ampgrams(training_data1, ns = c(3, 3), ds = list(c(1, 0), c(1, 1)))
-#ngrams3_2_2 <-  count_ampgrams(training_data2, ns = c(3, 3), ds = list(c(1, 0), c(1, 1)))
-#ngrams3_2_3 <-  count_ampgrams(training_data3, ns = c(3, 3), ds = list(c(1, 0), c(1, 1)))
-
-#ngrams3_1 <- rbind(ngrams3_1_1,ngrams3_1_2,ngrams3_1_3)
-#ngrams3_2 <- rbind(ngrams3_2_1,ngrams3_2_2,ngrams3_2_3)
-
 
 binary_ngrams <-  cbind(ngrams12,ngrams3_1,ngrams3_2)
 
-train_dat<- training_data %>% 
+train_dat <- training_data %>% 
   mutate(target = as.numeric((stringi::stri_match_last_regex(source_peptide, "(?<=AMP\\=)0|1") == "1"))) %>% 
   mutate(target = ifelse(target == 1,1,0))
 
@@ -157,23 +111,20 @@ imp_bigrams <- cut(test_bis, breaks = c(0, 0.05, 1))[[1]]
 ranger_train_data <- data.frame(as.matrix(binary_ngrams[, imp_bigrams]),
                                 tar = as.factor(train_dat[["target"]]))
 
-model_cv <- ranger(dependent.variable.name = "tar", data =  ranger_train_data, 
+model_cv <- ranger(dependent.variable.name = "tar", data = ranger_train_data, 
                    write.forest = TRUE, probability = TRUE, num.trees = 2000, 
                    verbose = FALSE)
 
-pred <-  predict(model_cv, data.frame(as.matrix(binary_ngrams, imp_bigrams)))
+pred <-  predict(model_cv, data.frame(as.matrix(binary_ngrams[, imp_bigrams])))
 
-mer_df<- training_data %>% 
-  mutate(target = as.numeric((stringi::stri_match_last_regex(source_peptide, "(?<=AMP\\=)0|1") == "1"))) %>% 
-  mutate(target = ifelse(target == 1,1,0)) %>% 
-  mutate(pred=cbind(pred$predictions)) %>% 
-  select(one_of("source_peptide","mer_id","target", "pred" ))
+mer_df <- train_dat %>% 
+  mutate(pred=pred[["predictions"]][, "1"]) %>% 
+  select(c("source_peptide","mer_id","target", "pred"))
 
-mer_statistics<-  calculate_statistics(mer_df)
+mer_statistics <- calculate_statistics(mer_df)
 
 peptydovy <- train_model_peptides(mer_statistics)
 
-model_cv
 
 #------------------------test
 
@@ -188,30 +139,30 @@ ngrams3_2_T <-  count_ampgrams(test_data, ns = c(3, 3), ds = list(c(1, 0), c(1, 
 
 binary_ngrams_T <-  cbind(ngrams12_T,ngrams3_1_T,ngrams3_2_T)
 
-test_dat<- test_data %>% 
+test_dat <- test_data %>% 
   mutate(target = as.numeric((stringi::stri_match_last_regex(source_peptide, "(?<=AMP\\=)0|1") == "1"))) %>% 
   mutate(target = ifelse(target == 1,1,0))
 
 
-pred_T <-  predict(model_cv, data.frame(as.matrix(binary_ngrams_T, imp_bigrams)))
+pred_T <- predict(model_cv, data.frame(as.matrix(binary_ngrams_T[, imp_bigrams])))
 
-mer_df_T<- test_dat %>% 
-  mutate(pred=cbind(pred_T$predictions)) %>% 
-  select(one_of("source_peptide","mer_id","target", "pred" ))
+mer_df_T <- test_dat %>% 
+  mutate(pred=pred_T[["predictions"]][, "1"]) %>% 
+  select(c("source_peptide","mer_id","target", "pred"))
 
-mer_statistics_T<-  calculate_statistics(mer_df_T)
+mer_statistics_T <- calculate_statistics(mer_df_T)
 
 
 
-gg <- predict(peptydovy,mer_statistics_T) 
+gg <- predict(peptydovy, mer_statistics_T) 
 
 getpred <- as.data.frame(gg$predictions)
 
 mer_statistics_T %>% 
   select(c("source_peptide","target")) %>% 
-  mutate(probability=getpred$`0`) %>% 
+  mutate(probability=getpred[["1"]]) %>% 
   rename("ID"="source_peptide") %>% 
-  mutate(prediction=NA) %>% 
-  write.csv(file=output_file,row.names = FALSE,quote = FALSE)
+  mutate(prediction=ifelse(probability > 0.5, 1, 0)) %>% 
+  write.csv(file=output_file, row.names = FALSE, quote = FALSE)
 
 
