@@ -3,6 +3,7 @@ args <- commandArgs(trailingOnly=TRUE)
 
 library(dplyr)
 library(class)
+library(checkmate)
 if (!require(tidysq)) devtools::install_github("BioGenies/tidysq")
 
 polarity_values <- c(
@@ -55,11 +56,51 @@ AAC <- function(x) {
   }))
 }
 
+#' Compute PseAAC matrix
+#' 
+#' @description Builds grey model with parameters 1 and 1
+#' from the supplied data. Returns a numeric vector of
+#' length 2 with \code{a} and \code{b} coefficients for 
+#' supplied observation.
+#' 
+#' @param x [\code{sq}]\cr
+#'  An object this function is applied to.
+#' @param feature_values [\code{numeric}]\cr
+#'  A named vector, where names are letters and values are
+#'  a numerical representation of some amino acid property.
+#' @param feature_name [\code{character(1)}]\cr
+#'  A name of used amino acid property.
+#' @param lambda [\code{integer(1)}]\cr
+#'  Number of features to generate based on given property.
+#' @param weight_factor [\code{numeric(1)}]\cr
+#'  Importance factor of single generated feature compared
+#'  to AAC features.
+#' 
+#' @examples
+#' polarity_values <- c(
+#'   A = -0.591, C = 1.343, D = 1.05, E = 1.357, F = -1.006,
+#'   G = -0.384, H = 0.336, I = -1.239, K = 1.831, L = -1.019,
+#'   M = -0.663, N = 0.945, P = 0.189, Q = 0.931, R = 1.538,
+#'   S = -0.228, T = -0.032, V = -1.337, W = -0.595, Y = 0.26
+#' )
+#' sq_ami <- tidysq::sq(c("PPAVMMFDILKKIQ", "PQEWYTWLPVMCTN"))
+#' PseAAC(sq_ami, polarity_values, "polarity",
+#'        lambda = 10)
+#' 
+#' @noRd
 PseAAC <- function(x,
                    feature_values,
                    feature_name,
                    lambda = 50,
                    weight_factor = 0.15) {
+  assert_class(x, "sq_ami_bsc")
+  assert_numeric(feature_values)
+  assert_names(names(feature_values), type = "unique", subset.of = alphabet(x))
+  assert_string(feature_name)
+  assert_count(lambda, positive = TRUE)
+  assert_number(weight_factor)
+  assert_numeric(get_sq_lengths(x), lower = lambda + 1)
+  
   sq_features <- sqapply(x, function(sequence) {
     feature_values[sequence]
   })
