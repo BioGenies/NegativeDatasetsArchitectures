@@ -58,10 +58,11 @@ AAC <- function(x) {
 
 #' Compute PseAAC matrix
 #' 
-#' @description Builds grey model with parameters 1 and 1
-#' from the supplied data. Returns a numeric vector of
-#' length 2 with \code{a} and \code{b} coefficients for 
-#' supplied observation.
+#' @description Computes 20 + lambda features for given
+#' sequences. Returns data in a \code{tibble} format. First
+#' 20 features are AAC-based amino acid frequencies, the
+#' rest are based on correlation factors of specified
+#' property.
 #' 
 #' @param x [\code{sq}]\cr
 #'  An object this function is applied to.
