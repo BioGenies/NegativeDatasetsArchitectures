@@ -4,7 +4,7 @@ args <- commandArgs(trailingOnly=TRUE)
 library(dplyr)
 library(stringi)
 library(protr)
-if (!require(tidysq)) devtools::install_github("BioGenies/tidysq")
+library(tidysq)
 if (!require(fknn)) devtools::install_github("DominikRafacz/fknn")
 
 # properties values used in PseACC are taken from www.csbio.sjtu.edu.cn/bioinf/PseAAC/ParaValue.htm
