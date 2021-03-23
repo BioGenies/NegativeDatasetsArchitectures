@@ -66,6 +66,3 @@ create_target <- function(path) {
   
   target
 }
-
-create_features("example-data/exemplary_train_dataset.fa")
-create_target("example-data/exemplary_train_dataset.fa")
