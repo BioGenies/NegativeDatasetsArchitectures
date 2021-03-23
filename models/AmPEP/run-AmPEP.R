@@ -3,7 +3,7 @@ args <- commandArgs(trailingOnly=TRUE)
 
 library(dplyr)
 library(randomForest)
-if (!require(tidysq)) devtools::install_github("BioGenies/tidysq")
+library(tidysq)
 
 groupings <- list(
   hydrophobicity = list(C1 = c("R", "K", "E", "D", "Q", "N"),
