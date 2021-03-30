@@ -1,8 +1,7 @@
 #' @example 
 #' library(biogram)
-#' example_seq <- "CAD"
+#' example_seq <- c("c", "a", "d")
 #' aaprop_matrix <- aaprop
-#' colnames(aaprop_matrix) <- toupper(colnames(aaprop_matrix))
 #' CSAMPPRED_features(example_seq, aaprop_matrix) 
 CSAMPPRED_features <- function(sequence, aaprop_matrix) {
   
@@ -18,9 +17,20 @@ CSAMPPRED_features <- function(sequence, aaprop_matrix) {
   f3_avg_hydrophobic_moment <- sum(unlist(lapply(sequence, function(x) 
     aaprop_matrix[rownames(aaprop_matrix) == "EISD860102", x]))) / length(sequence)
   
-  # f4_amphipathicity TODO
+  # f4_amphipathicity
   # the amphipathicity was calculated as the ratio between
   # hydrophobic and charged residues
+  charged <- c("r", "k", "h", "d", "e")
+  hydrophobic <- c("a", "i", "l", "v", "m", "f", "w")
+  
+  charged_ <- sum(sequence %in% charged)
+  hydrophobic_ <- sum(sequence %in% hydrophobic)
+  
+  if (hydrophobic_ == 0) {
+    f4_amphipathicity = 0
+  } else {
+    f4_amphipathicity = charged_ / hydrophobic_
+  }
   
   # {KOEP990101}{Alpha-helix propensity derived from designed sequences (Koehl-Levitt, 1999)}
   f5_propensity <- sum(unlist(lapply(sequence, function(x) 
@@ -45,7 +55,7 @@ CSAMPPRED_features <- function(sequence, aaprop_matrix) {
   c(f1_avg_charge,
     f2_avg_hydrophobicity,
     f3_avg_hydrophobic_moment,
-    #f4_,
+    f4_amphipathicity,
     f5_propensity, 
     f6_flexibility,
     f7_formation_alpha,

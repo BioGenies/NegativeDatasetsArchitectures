@@ -27,13 +27,11 @@ runCSAMPPred <- function(train_path, test_path, output_path) {
   X_train <- train_pca[, pvals < 0.05]
   X_test <- test_pca[, pvals < 0.05]
   
-  # which model is appropiate?
-  # AFAIK: no probability, only classes predicted
-  svm_linear <- svm(X_train, train_target, kernel = "linear")
-  # svm_radial <- svm(X_train, train_target, kernel = "radial")
+  #svm_linear <- svm(X_train, train_target, kernel = "linear")
   # svm_poly <- svm(X_train, train_target, kernel = "polynomial")
+  svm_radial <- svm(X_train, train_target, kernel = "radial")
   
-  predictions <- as.character(predict(svm_linear, X_test))
+  predictions <- as.character(predict(svm_radial, X_test))
   y_test <- as.character(test_target)
   test_seqnames <-rownames(test_features)
   
