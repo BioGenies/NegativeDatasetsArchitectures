@@ -4,7 +4,10 @@ args <- commandArgs(trailingOnly=TRUE)
 library(dplyr)
 library(class)
 library(checkmate)
-if (!require(tidysq)) devtools::install_github("BioGenies/tidysq")
+library(tidysq)
+library(protr)
+
+lambda <- 50
 
 polarity_values <- c(
   A = -0.591, C = 1.343, D = 1.05, E = 1.357, F = -1.006,
@@ -41,117 +44,60 @@ electrostatic_values <- c(
   S = -2.647, T = 1.313, V = -1.262, W = -0.184, Y = 1.512
 )
 
-correlation_factor <- function(sequence, lambda) {
-  seq_length <- length(sequence)
-  mean((sequence[(1 + lambda):seq_length] -
-          sequence[1:(seq_length - lambda)])^2)
-}
+custom_prop_names <- c("polarity", "secondary_structure", "molecular_volume",
+                       "codon_diversity", "electrostatic")
 
-AAC <- function(x) {
-  bind_rows(sqapply(x, function(sequence) {
-    ami_bsc_letters <- get_standard_alphabet("ami_bsc")[1:20]
-    setNames(vapply(ami_bsc_letters, function(letter) {
-      sum(letter == sequence)/length(sequence)
-    }, numeric(1)), ami_bsc_letters)
-  }))
-}
+custom_pseAAC_props <- rbind(polarity_values,
+                             secondary_struct_values,
+                             molecular_volume_values,
+                             codon_diversity_values,
+                             electrostatic_values) %>%
+  as_tibble() %>%
+  mutate(AccNo = custom_prop_names) %>%
+  select(AccNo, A, R, N, D, C, E, Q, G, H, I, L, K, M, F, P ,S, T, W, Y, V)
 
-#' Compute PseAAC matrix
-#' 
-#' @description Computes 20 + lambda features for given
-#' sequences. Returns data in a \code{tibble} format. First
-#' 20 features are AAC-based amino acid frequencies, the
-#' rest are based on correlation factors of specified
-#' property.
-#' 
-#' @param x [\code{sq}]\cr
-#'  An object this function is applied to.
-#' @param feature_values [\code{numeric}]\cr
-#'  A named vector, where names are letters and values are
-#'  a numerical representation of some amino acid property.
-#' @param feature_name [\code{character(1)}]\cr
-#'  A name of used amino acid property.
-#' @param lambda [\code{integer(1)}]\cr
-#'  Number of features to generate based on given property.
-#' @param weight_factor [\code{numeric(1)}]\cr
-#'  Importance factor of single generated feature compared
-#'  to AAC features.
-#' 
-#' @examples
-#' polarity_values <- c(
-#'   A = -0.591, C = 1.343, D = 1.05, E = 1.357, F = -1.006,
-#'   G = -0.384, H = 0.336, I = -1.239, K = 1.831, L = -1.019,
-#'   M = -0.663, N = 0.945, P = 0.189, Q = 0.931, R = 1.538,
-#'   S = -0.228, T = -0.032, V = -1.337, W = -0.595, Y = 0.26
-#' )
-#' sq_ami <- tidysq::sq(c("PPAVMMFDILKKIQ", "PQEWYTWLPVMCTN"))
-#' PseAAC(sq_ami, polarity_values, "polarity",
-#'        lambda = 10)
-#' 
-#' @noRd
-PseAAC <- function(x,
-                   feature_values,
-                   feature_name,
-                   lambda = 50,
-                   weight_factor = 0.15) {
-  assert_class(x, "sq_ami_bsc")
-  assert_numeric(feature_values)
-  assert_names(names(feature_values), type = "unique", subset.of = alphabet(x))
-  assert_string(feature_name)
-  assert_count(lambda, positive = TRUE)
-  assert_number(weight_factor)
-  assert_numeric(get_sq_lengths(x), lower = lambda + 1)
-  
-  sq_features <- sqapply(x, function(sequence) {
-    feature_values[sequence]
-  })
-  ret <- bind_rows(lapply(sq_features, function(sequence) {
-    setNames(vapply(1:lambda, function(lambda) {
-      correlation_factor(sequence, lambda)
-    }, numeric(1)), paste0(feature_name, "_", 1:lambda))
-  }))
-  
-  # TODO: if allowing <=50 length sequences, remove NA for rowSums
-  bind_cols(AAC(x), ret) %>%
-    mutate(row_sum = rowSums(across())) %>%
-    mutate(ret, across(.fns = ~(.x / row_sum))) %>%
-    select(-row_sum)
-}
+feature_names <- c(
+  "A", "R", "N", "D", "C", "E", "Q", "G", "H", "I",
+  "L", "K", "M", "F", "P", "S", "T", "W", "Y", "V",
+  paste0(rep(custom_prop_names, each = lambda), "_", 1:50)
+)
 
-# Seems like a function specific to this paper
-# Basically standardizes feature values
-feature_conversion <- function(feature) {
-  centered_feature <- feature - mean(feature)
-  centered_feature/sqrt(mean(centered_feature^2))
-}
 
 prepare_features <- function(sequence_file) {
   sequences_tbl <- read_fasta(sequence_file) %>%
     mutate(sq = remove_ambiguous(sq)) %>%
-    filter(get_sq_lengths(sq) > 50)
+    filter(get_sq_lengths(sq) > lambda)
   
-  polarity_tbl <-
-    PseAAC(sequences_tbl[["sq"]], polarity_values, "polarity")
-  secondary_struct_tbl <-
-    PseAAC(sequences_tbl[["sq"]], secondary_struct_values, "secondary_structure") %>%
-    select(starts_with("secondary_structure"))
-  molecular_volume_tbl <-
-    PseAAC(sequences_tbl[["sq"]], molecular_volume_values, "molecular_volume") %>%
-    select(starts_with("molecular_volume"))
-  codon_diversity_tbl <-
-    PseAAC(sequences_tbl[["sq"]], codon_diversity_values, "codon_diversity") %>%
-    select(starts_with("codon_diversity"))
-  electrostatic_tbl <-
-    PseAAC(sequences_tbl[["sq"]], electrostatic_values, "electrostatic") %>%
-    select(starts_with("electrostatic"))
+  ret <- sqapply(sequences_tbl[["sq"]], function(sequence) {
+    ret <- c(
+      extractPAAC(sequence,
+                  lambda = lambda,
+                  props = "polarity",
+                  customprops = custom_pseAAC_props),
+      extractPAAC(sequence,
+                  lambda = lambda,
+                  props = "secondary_structure",
+                  customprops = custom_pseAAC_props)[21:70],
+      extractPAAC(sequence,
+                  lambda = lambda,
+                  props = "molecular_volume",
+                  customprops = custom_pseAAC_props)[21:70],
+      extractPAAC(sequence,
+                  lambda = lambda,
+                  props = "codon_diversity",
+                  customprops = custom_pseAAC_props)[21:70],
+      extractPAAC(sequence,
+                  lambda = lambda,
+                  props = "electrostatic",
+                  customprops = custom_pseAAC_props)[21:70]
+    )
+    names(ret) <- feature_names
+    ret
+  }, single_string = TRUE)
   
   # TODO: select only the 25 relevant features
-  bind_cols(id = sequences_tbl[["name"]],
-            polarity_tbl,
-            secondary_struct_tbl,
-            molecular_volume_tbl,
-            codon_diversity_tbl,
-            electrostatic_tbl) %>%
+  bind_rows(ret) %>%
+    mutate(id = sequences_tbl[["name"]]) %>%
     select(everything()) %>%
     mutate(target = as.factor(ifelse(grepl("AMP=1", id), 1, 0)))
 }
