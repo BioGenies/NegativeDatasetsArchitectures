@@ -499,9 +499,9 @@ def main():
     AMP_train = []
     non_AMP_train = []  
     for seq_record in SeqIO.parse(train_file, 'fasta'):
-            if re.search("AMP=1", seq_record.id):
+            if re.search("AMP=1", seq_record.description):
                 AMP_train.append(str(seq_record.seq))
-            elif re.search("AMP=0", seq_record.id):
+            elif re.search("AMP=0", seq_record.description):
                 non_AMP_train.append(str(seq_record.seq))
                 
     
