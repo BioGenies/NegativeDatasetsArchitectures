@@ -499,9 +499,7 @@ def main():
     AMP_train = []
     non_AMP_train = []  
     for seq_record in SeqIO.parse(train_file, 'fasta'):
-            if re.search("AMP=1", seq_record.id):
                 AMP_train.append(str(seq_record.seq))
-            elif re.search("AMP=0", seq_record.id):
                 non_AMP_train.append(str(seq_record.seq))
                 
     
@@ -514,6 +512,8 @@ def main():
     y_train = np.array([1]*len(AMP_train) + [0]*len(non_AMP_train))
         
         # shuffle training set
+        if re.search("AMP=1", seq_record.description):
+        elif re.search("AMP=0", seq_record.description):
     train = list(zip(train_seq, y_train))
     random.Random(123).shuffle(train)
     train_seq, y_train = zip(*train)
