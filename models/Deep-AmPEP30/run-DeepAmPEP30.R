@@ -21,10 +21,9 @@ library("ftrCOOL") # to compute PseKRAAC
 
 tabularize_sequences <- function(input_path) {
   # for one sequence ----
-  # a putative value (the paper does not mention the value of this param explicitly)
-  # the value 1 is deduced since it results in 86 features
+  # an assumed value (the paper does not mention explicitly the value of this param)
+  # the value 1 is assumed, since it generates 86 features
   # (the same number of features is mentioned in the paper)
-  # the larger values of k gives more features
   k <- 1
   feature_eng_params <- list(list(f=ftrCOOL::PseKRAAC_T3A, clusters=19),
                              list(f=ftrCOOL::PseKRAAC_T7, clusters=15),
