@@ -532,9 +532,9 @@ def main():
     
     for seq_record in SeqIO.parse(test_file, 'fasta'):
             ids_test.append(seq_record.id)
-            if re.search("AMP=1", seq_record.id):
+            if re.search("AMP=1", seq_record.description):
                 AMP_test.append(str(seq_record.seq))
-            elif re.search("AMP=0", seq_record.id):
+            elif re.search("AMP=0", seq_record.description):
                 non_AMP_test.append(str(seq_record.seq))
                    
     test_seq = AMP_test + non_AMP_test
