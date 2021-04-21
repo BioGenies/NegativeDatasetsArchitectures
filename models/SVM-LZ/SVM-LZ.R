@@ -2,7 +2,7 @@
 args <- commandArgs(trailingOnly=TRUE)
 
 library(rBLAST)
-library(seqinr)
+library(biogram)
 library(dplyr)
 library(stringr)
 library(e1071)
@@ -51,8 +51,8 @@ metric_column = "Perc.Ident"
 
 ## Read data
 
-train <- read.fasta(train_path, seqtype="AA")
-test <- read.fasta(test_path, seqtype="AA")
+train <- read_fasta(train_path)
+test <- read_fasta(test_path)
 
 y_train <- create_target(train)
 y_test <- create_target(test)
