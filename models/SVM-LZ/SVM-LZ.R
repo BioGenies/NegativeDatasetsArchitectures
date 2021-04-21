@@ -2,12 +2,22 @@
 args <- commandArgs(trailingOnly=TRUE)
 
 library(rBLAST)
-library(biogram)
 library(dplyr)
 library(stringr)
 library(e1071)
 
-
+read_fasta <- function(file) {
+  all_lines <- readLines(file)
+  prot_id <- cumsum(grepl("^>", all_lines))
+  all_prots <- split(all_lines, prot_id)
+  
+  seq_list <- lapply(all_prots, function(ith_seq)
+    unlist(strsplit(ith_seq[-1], split = "")))
+  
+  names(seq_list) <- sub(">", "", sapply(all_prots, function(ith_seq) ith_seq[1]), fixed = TRUE)
+  
+  seq_list
+}
 
 create_target <- function(fasta_file) {
   target <- unlist(lapply(fasta_file, function(x) ifelse(grepl("AMP=1", attr(x, "name")) ,1 , 0)))
