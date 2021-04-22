@@ -5,6 +5,7 @@ library(ranger)
 library(tidyr)
 library(stringi)
 library(data.table)
+library(seqR)
 #--------------------------------------------------FUNCTIONS
 
 #----get_mers
@@ -24,16 +25,29 @@ create_mer_df <- function(seq)
 
 #--------------------- peptydy (count ampgrams)
 
-count_ampgrams <- function(mer_df, ns, ds) {
+count_ampgrams <- function(mer_df, k_vector, gap_list) {
   
   mer_df[, grep("^X", colnames(mer_df))] %>% 
     as.matrix() %>% 
-    count_multigrams(ns = ns, 
-                     ds = ds,
-                     seq = .,
-                     u = toupper(colnames(aaprop))) %>% 
+    count_multimers(k_vector = k_vector,
+                    kmer_gaps_list = gap_list,
+                    alphabet = toupper(colnames(aaprop))) %>% 
     binarize
 }
+
+find_ngrams <- function(seq, decoded_ngrams) {
+  
+  end_pos <- 10L:length(seq)
+  start_pos <- end_pos - 9
+  
+  res <- binarize(do.call(rbind, lapply(1L:length(end_pos), function(ith_mer_id) {
+    ten_mer <- paste0(seq[start_pos[ith_mer_id]:end_pos[ith_mer_id]], collapse = "")
+    stri_count(ten_mer, regex = decoded_ngrams)
+  })))
+  
+  res
+}
+
 #---------------------------------------------------------------ANALYZIS
 count_longest <- function(x) {
   splitted_x <- strsplit(x = paste0(as.numeric(x > 0.5), collapse = ""),
@@ -93,18 +107,18 @@ training_data <- read_fasta(train_file) %>%
   list2matrix() %>% 
   create_mer_df()
 
-ngrams12 <- count_ampgrams(training_data, ns = c(1, rep(2, 4)),ds = list(0, 0, 1, 2, 3))
-ngrams3_1 <-  count_ampgrams(training_data, ns = c(3, 3), ds = list(c(0, 0), c(0, 1)))
-ngrams3_2 <-  count_ampgrams(training_data, ns = c(3, 3), ds = list(c(1, 0), c(1, 1)))
+ngrams12 <- count_ampgrams(training_data, k_vector = c(1, rep(2, 4)), gap_list = list(NULL, NULL, 1, 2, 3))
+ngrams3_1 <- count_ampgrams(training_data, k_vector = c(3, 3), gap_list = list(c(0, 0), c(0, 1)))
+ngrams3_2 <- count_ampgrams(training_data, k_vector = c(3, 3), gap_list = list(c(1, 0), c(1, 1)))
 
-binary_ngrams <-  cbind(ngrams12,ngrams3_1,ngrams3_2)
+binary_ngrams <-  binarize(cbind(ngrams12, ngrams3_1, ngrams3_2))
 
 train_dat <- training_data %>% 
   mutate(target = as.numeric((stringi::stri_match_last_regex(source_peptide, "(?<=AMP\\=)0|1") == "1"))) %>% 
   mutate(target = ifelse(target == 1,1,0))
 
 
-test_bis <- test_features(train_dat[["target"]],binary_ngrams)
+test_bis <- test_features(train_dat[["target"]], binary_ngrams)
 
 imp_bigrams <- cut(test_bis, breaks = c(0, 0.05, 1))[[1]]
 
@@ -115,7 +129,7 @@ model_cv <- ranger(dependent.variable.name = "tar", data = ranger_train_data,
                    write.forest = TRUE, probability = TRUE, num.trees = 2000, 
                    verbose = FALSE)
 
-pred <-  predict(model_cv, data.frame(as.matrix(binary_ngrams[, imp_bigrams])))
+pred <- predict(model_cv, data.frame(as.matrix(binary_ngrams[, imp_bigrams])))
 
 mer_df <- train_dat %>% 
   mutate(pred=pred[["predictions"]][, "1"]) %>% 
@@ -128,31 +142,26 @@ peptydovy <- train_model_peptides(mer_statistics)
 
 #------------------------test
 
-test_data <- read_fasta(test_file) %>% 
-  list2matrix() %>% 
-  create_mer_df()
+test_data <- read_fasta(test_file) 
 
-ngrams12_T <- count_ampgrams(test_data, ns = c(1, rep(2, 4)),ds = list(0, 0, 1, 2, 3))
-ngrams3_1_T <-  count_ampgrams(test_data, ns = c(3, 3), ds = list(c(0, 0), c(0, 1)))
-ngrams3_2_T <-  count_ampgrams(test_data, ns = c(3, 3), ds = list(c(1, 0), c(1, 1)))
-
-
-binary_ngrams_T <-  cbind(ngrams12_T,ngrams3_1_T,ngrams3_2_T)
+ngrams_T <- lapply(names(test_data), function(ith_prot) {
+  find_ngrams(test_data[[ith_prot]], imp_bigrams)
+}) %>% do.call(rbind, .)
+colnames(ngrams_T) <- imp_bigrams
 
 test_dat <- test_data %>% 
+  list2matrix() %>% 
+  create_mer_df() %>% 
   mutate(target = as.numeric((stringi::stri_match_last_regex(source_peptide, "(?<=AMP\\=)0|1") == "1"))) %>% 
   mutate(target = ifelse(target == 1,1,0))
 
-
-pred_T <- predict(model_cv, data.frame(as.matrix(binary_ngrams_T[, imp_bigrams])))
+pred_T <- predict(model_cv, data.frame(as.matrix(ngrams_T)))
 
 mer_df_T <- test_dat %>% 
   mutate(pred=pred_T[["predictions"]][, "1"]) %>% 
   select(c("source_peptide","mer_id","target", "pred"))
 
 mer_statistics_T <- calculate_statistics(mer_df_T)
-
-
 
 gg <- predict(peptydovy, mer_statistics_T) 
 
