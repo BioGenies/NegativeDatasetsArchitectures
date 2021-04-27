@@ -52,10 +52,13 @@ parse_LZ_features <- function(filepath) {
 }
 
 ## SETUP
-
+args <- c("./example-data/exemplary_train_dataset.fa",
+          "./example-data/exemplary_test_dataset.fa",
+          "svmlz-results-dummy.csv")
 train_path <- args[1]
 test_path <- args[2]
 output_path <- args[3]
+
 
 metric_column = "Perc.Ident"
 
@@ -151,11 +154,7 @@ for (seqname in names(BLAST_preds_test)) {
 write.csv(test_df, file=output_path, row.names=FALSE)
 
 ## Sequences w/o alignment hit will be used in SVM-LZ
-print("wo hit dimensions")
-print(dim(train_sequences_wo_hit))
-print(dim(test_sequences_wo_hit))
-print(sum(is.na(train_df$pred)))
-print(dim(train_df))
+
 train_sequences_wo_hit <- train_reduced[train_df[is.na(train_df$pred), "id"]]
 test_sequences_wo_hit <- test[test_df[is.na(test_df$pred), "id"]]
 
@@ -167,6 +166,11 @@ train_sequences_wo_hit_pos <- train_sequences_wo_hit[posIndices]
 train_sequences_wo_hit_neg <- train_sequences_wo_hit[-posIndices]
 
 # save file so that they can be used in a perl script
+print("wo hit dimensions")
+print(dim(train_sequences_wo_hit))
+print(dim(test_sequences_wo_hit))
+print(sum(is.na(train_df$pred)))
+print(dim(train_df))
 
 save_to_LZ_format(LZ_sequences, "Fixed_AMPtrainingset.txt")
 save_to_LZ_format(test_sequences_wo_hit, "0New_AMPtest.txt")
