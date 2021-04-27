@@ -12,7 +12,7 @@ library(seqR)
 
 create_mer_df <- function(seq) 
   do.call(rbind, lapply(1L:nrow(seq), function(i) {
-    seq2ngrams(seq[i, ][!is.na(seq[i, ])], 10, a()[-1]) %>% 
+    seq2ngrams(seq[i, ][!is.na(seq[i, ])], 5, a()[-1]) %>% 
       decode_ngrams() %>% 
       unname() %>% 
       strsplit(split = "") %>% 
@@ -37,8 +37,8 @@ count_ampgrams <- function(mer_df, k_vector, gap_list) {
 
 find_ngrams <- function(seq, decoded_ngrams) {
   
-  end_pos <- 10L:length(seq)
-  start_pos <- end_pos - 9
+  end_pos <- 5L:length(seq)
+  start_pos <- end_pos - 4
   
   res <- binarize(do.call(rbind, lapply(1L:length(end_pos), function(ith_mer_id) {
     ten_mer <- paste0(seq[start_pos[ith_mer_id]:end_pos[ith_mer_id]], collapse = "")
@@ -115,7 +115,7 @@ binary_ngrams <-  binarize(cbind(ngrams12, ngrams3_1, ngrams3_2))
 
 train_dat <- training_data %>% 
   mutate(target = as.numeric((stringi::stri_match_last_regex(source_peptide, "(?<=AMP\\=)0|1") == "1"))) %>% 
-  mutate(target = ifelse(target == 1,1,0))
+  mutate(target = ifelse(target == 1, TRUE, FALSE))
 
 
 test_bis <- test_features(train_dat[["target"]], binary_ngrams)
@@ -132,7 +132,7 @@ model_cv <- ranger(dependent.variable.name = "tar", data = ranger_train_data,
 pred <- predict(model_cv, data.frame(as.matrix(binary_ngrams[, imp_bigrams])))
 
 mer_df <- train_dat %>% 
-  mutate(pred=pred[["predictions"]][, "1"]) %>% 
+  mutate(pred=pred[["predictions"]][, "TRUE"]) %>% 
   select(c("source_peptide","mer_id","target", "pred"))
 
 mer_statistics <- calculate_statistics(mer_df)
@@ -158,7 +158,7 @@ test_dat <- test_data %>%
 pred_T <- predict(model_cv, data.frame(as.matrix(ngrams_T)))
 
 mer_df_T <- test_dat %>% 
-  mutate(pred=pred_T[["predictions"]][, "1"]) %>% 
+  mutate(pred=pred_T[["predictions"]][, "TRUE"]) %>% 
   select(c("source_peptide","mer_id","target", "pred"))
 
 mer_statistics_T <- calculate_statistics(mer_df_T)
@@ -169,7 +169,7 @@ getpred <- as.data.frame(gg$predictions)
 
 mer_statistics_T %>% 
   select(c("source_peptide","target")) %>% 
-  mutate(probability=getpred[["1"]]) %>% 
+  mutate(probability=getpred[["TRUE"]]) %>% 
   rename("ID"="source_peptide") %>% 
   mutate(prediction=ifelse(probability > 0.5, 1, 0)) %>% 
   write.csv(file=output_file, row.names = FALSE, quote = FALSE)
