@@ -554,7 +554,7 @@ def main():
     
     for tr_ens, te_ens in ensemble.split(X_train, y_train):
             model = build_model()
-            early_stopping = EarlyStopping(monitor='val_acc',  min_delta=0.001, patience=50, restore_best_weights=True)
+            early_stopping = EarlyStopping(monitor='val_accuracy',  min_delta=0.001, patience=50, restore_best_weights=True)
             model.fit(X_train[tr_ens], np.array(y_train[tr_ens]), epochs=1000, batch_size=32, 
                       validation_data=(X_train[te_ens], y_train[te_ens]), verbose=2, initial_epoch=0, callbacks=[early_stopping])
             temp_pred_train = model.predict(X_train).flatten() # predicted scores on the [whole] training set from the current model

@@ -5,49 +5,49 @@ library(rBLAST)
 library(dplyr)
 library(stringr)
 library(e1071)
+library(tidysq)
 
 read_fasta <- function(file) {
   all_lines <- readLines(file)
   prot_id <- cumsum(grepl("^>", all_lines))
   all_prots <- split(all_lines, prot_id)
-  
+
   seq_list <- lapply(all_prots, function(ith_seq)
     unlist(strsplit(ith_seq[-1], split = "")))
-  
+
   names(seq_list) <- sub(">", "", sapply(all_prots, function(ith_seq) ith_seq[1]), fixed = TRUE)
-  
+
   seq_list
 }
 
 create_target <- function(fasta_file) {
-  target <- unlist(lapply(fasta_file, function(x) ifelse(grepl("AMP=1", attr(x, "name")) ,1 , 0)))
-  names(target) <- NULL
-  target <- as.factor(target)
-  
-  target
+  target <- lapply(names(fasta_file), function(x) ifelse(grepl("AMP=1", x) ,1 , 0))
+  as.factor(unlist(target))
 }
+
+
 
 # save sequences to a format acceptable by perl script (LZ complexity features)
 save_to_LZ_format <- function(sequences, filename) {
   text <- paste0(lapply(sequences, function(x)
     paste0("\n", paste0(x, collapse=""), collapse="")), collapse="")
-  
+
   writeLines(text, filename)
 }
 
 # parse perl script output
 parse_LZ_features <- function(filepath) {
-  
+
   lines <- readLines(filepath)
-  
+
   x <- lapply(lines, function(line) {
-    as.numeric(unlist(lapply(str_split((str_split(line, pattern = "\t")[[1]][2:1001]), pattern=":"), 
+    as.numeric(unlist(lapply(str_split((str_split(line, pattern = "\t")[[1]][2:1001]), pattern=":"),
                              function(x) {x[2]}
     )
     )
     )
   })
-  
+
   do.call(rbind, x)
 }
 
@@ -101,8 +101,9 @@ blastDir <- "./tmp-blast-dir/"
 fasta_name <- "tmp-db-sequences.fasta"
 dir.create(blastDir)
 # Positive sequences BLAST database
-write.fasta(train_reduced, names(train), paste0(blastDir, fasta_name))
+write_fasta(sq(unlist(lapply(train_reduced, function(x) paste0(x, collapse="")), use.names=FALSE)), names(train_reduced), paste0(blastDir, fasta_name))
 makeblastdb(paste0(blastDir, fasta_name), dbtype = "prot")
+
 
 # predict on both train and test sequences
 
@@ -121,19 +122,19 @@ BLASTP_predictions_train <- BLASTP_predictions_train[BLASTP_predictions_train$Pe
 ## AMP predictions based on alignments for both train and test sequences
 
 BLAST_preds_train <- lapply(unique(BLASTP_predictions_train[["QueryID"]]), function(seq_name) {
-  
+
   blast_pred <- BLASTP_predictions_train[BLASTP_predictions_train[["QueryID"]] == seq_name, ]
   best_subject <- blast_pred[which.max(blast_pred[[metric_column]]), "SubjectID"]
   ifelse(grepl("AMP=1", best_subject), 1, 0)
-  
+
 })
 
 BLAST_preds_test <- lapply(unique(BLASTP_predictions_test[["QueryID"]]), function(seq_name) {
-  
+
   blast_pred <- BLASTP_predictions_test[BLASTP_predictions_test[["QueryID"]] == seq_name, ]
   best_subject <- blast_pred[which.max(blast_pred[[metric_column]]), "SubjectID"]
   ifelse(grepl("AMP=1", best_subject), 1, 0)
-  
+
 })
 
 names(BLAST_preds_train) <- unique(BLASTP_predictions_train[["QueryID"]])
@@ -147,7 +148,14 @@ for (seqname in names(BLAST_preds_test)) {
   test_df[test_df$id == seqname, "pred"] <- BLAST_preds_test[[seqname]]
 }
 
+write.csv(test_df, file=output_path, row.names=FALSE)
+
 ## Sequences w/o alignment hit will be used in SVM-LZ
+print("wo hit dimensions")
+print(dim(train_sequences_wo_hit))
+print(dim(test_sequences_wo_hit))
+print(sum(is.na(train_df$pred)))
+print(dim(train_df))
 train_sequences_wo_hit <- train_reduced[train_df[is.na(train_df$pred), "id"]]
 test_sequences_wo_hit <- test[test_df[is.na(test_df$pred), "id"]]
 
@@ -202,5 +210,3 @@ file.remove("0New_AMPtrain-.txt")
 file.remove("FV_0New_AMPtest.txt")
 file.remove("FV_0New_AMPtrain+.txt")
 file.remove("FV_0New_AMPtrain-.txt")
-
-
