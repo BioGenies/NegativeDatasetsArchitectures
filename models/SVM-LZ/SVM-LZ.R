@@ -52,9 +52,9 @@ parse_LZ_features <- function(filepath) {
 }
 
 ## SETUP
-args <- c("./example-data/exemplary_train_dataset.fa",
-          "./example-data/exemplary_test_dataset.fa",
-          "svmlz-results-dummy.csv")
+# args <- c("./example-data/exemplary_train_dataset.fa",
+#           "./example-data/exemplary_test_dataset.fa",
+#           "svmlz-results-dummy.csv")
 train_path <- args[1]
 test_path <- args[2]
 output_path <- args[3]
@@ -164,6 +164,8 @@ train_sequences_wo_hit_pos <- train_sequences_wo_hit[posIndices]
 train_sequences_wo_hit_neg <- train_sequences_wo_hit[-posIndices]
 
 # save file so that they can be used in a perl script
+print(length(train_sequences_wo_hit_pos))
+print(length(train_sequences_wo_hit_neg))
 
 save_to_LZ_format(LZ_sequences, "Fixed_AMPtrainingset.txt")
 save_to_LZ_format(test_sequences_wo_hit, "0New_AMPtest.txt")
@@ -173,6 +175,9 @@ save_to_LZ_format(train_sequences_wo_hit_neg, "0New_AMPtrain-.txt")
 system("perl models/SVM-LZ/LZ.pl 0")
 system("perl models/SVM-LZ/LZ.pl 1")
 system("perl models/SVM-LZ/LZ.pl 2")
+
+# extra sleep time - perl scripts can be finished
+Sys.sleep(900)
 
 ## parse LZ features
 library(stringr)
