@@ -44,7 +44,7 @@ rownames(ampir_featuresTest) <- NULL
 
 #ampir_pred <- predict(ampir_svm_model, ampir_featuresTest)
 
-ampir_AMPs <- predict_amps(ampir_test_df, min_len = 5, model = ampir_svm_model)
+ampir_AMPs <- predict_amps(ampir_test_df, min_len = 4, model = ampir_svm_model)
 
 
 ampir_AMPs %>%
