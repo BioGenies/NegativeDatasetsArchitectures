@@ -1,0 +1,20 @@
+1. Trenujesz model na danych treningowych
+./train_amplify.py -amp_tr TRAIN_DATASET -out_dir PATH_TO_SAVE_MODEL -model_name XXX
+2. Robisz predykcję: 
+
+./AMPlify.py [-h] -md MODEL_DIR [-m MODEL_NAME MODEL_NAME MODEL_NAME MODEL_NAME MODEL_NAME] -s SEQS [-od OUT_DIR] [-of {txt,tsv}] [-att {on,off}]
+
+optional arguments:
+  -h, --help            Show this help message and exit
+  -md MODEL_DIR, --model_dir MODEL_DIR
+                        Directory of where models are stored
+  -m MODEL_NAME MODEL_NAME MODEL_NAME MODEL_NAME MODEL_NAME, --model_name MODEL_NAME MODEL_NAME MODEL_NAME MODEL_NAME MODEL_NAME
+                        File names of 5 trained models (optional)
+  -s SEQS, --seqs SEQS  Sequences for prediction, fasta file
+  -od OUT_DIR, --out_dir OUT_DIR
+                        Output directory (optional)
+  -of {txt,tsv}, --out_format {txt,tsv}
+                        Output format, txt or tsv (optional)
+  -att {on,off}, --attention {on,off}
+                        Whether to output attention scores, on or off (optional)
+
