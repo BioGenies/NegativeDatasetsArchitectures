@@ -107,10 +107,10 @@ runCSAMPPred <- function(train_path, test_path, output_path) {
   
   predictions <- as.character(predict(svm_radial, X_test))
   y_test <- as.character(test_target)
-  test_seqnames <-rownames(test_features)
+  test_seqnames <- rownames(test_features)
   
-  out <- data.frame(cbind(test_seqnames, y_test, predictions))
-  colnames(out) <- c("ID", "target", "prediction")
+  out <- data.frame(cbind(test_seqnames, y_test, predictions, probability = NA))
+  colnames(out) <- c("ID", "target", "prediction", "probability")
   
   write.csv(out, file = output_path, row.names = FALSE, quote = FALSE)
   

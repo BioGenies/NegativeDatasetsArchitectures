@@ -201,9 +201,10 @@ def main():
     rf_wout_oob.fit(train_features.iloc[:, 3:], train_features['target'])
 
     results = pd.DataFrame({
-        'id': test_features.index,
+        'ID': test_features.index,
         'target': test_features.target,
-        'predict': rf_wout_oob.predict_proba(test_features.iloc[:, 3:])[:, 1]},
+        'prediction': rf_wout_oob.predict_proba(test_features.iloc[:, 3:])[:, 1],
+        'probability': np.nan}
     ).reset_index(drop=True)
 
     results.to_csv(args.output, index=False)

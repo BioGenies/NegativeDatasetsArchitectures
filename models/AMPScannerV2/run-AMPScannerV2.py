@@ -89,7 +89,7 @@ def main():
     pred_class = numpy.rint(preds) #round up or down at 0.5
 	
     results = pd.DataFrame({
-        'id': ids_test,
+        'ID': ids_test,
         'target': y_test,
         'prediction': pred_class.astype(numpy.int32).flatten().tolist(),
         'probability': preds.flatten().tolist()},

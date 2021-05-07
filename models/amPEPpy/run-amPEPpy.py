@@ -184,7 +184,7 @@ def main():
     preds = clf.predict_proba(classify_df)
 
     results = pd.DataFrame({
-        'id': id_info,
+        'ID': id_info,
         'target': targets,
         'prediction': np.rint(preds[:,1]).astype(np.int32).flatten().tolist(),
         'probability': preds[:,1].tolist()},

@@ -578,7 +578,7 @@ def main():
     pred_class = np.rint(preds)
     
     results = pd.DataFrame({
-            'id': ids_test,
+            'ID': ids_test,
             'target': y_test,
             'prediction': pred_class.astype(np.int32).flatten().tolist(),
             'probability': preds.flatten().tolist()},
