@@ -69,7 +69,7 @@ generate_features <- function(sequence_file) {
   seqs <- read_fasta(sequence_file)
   # 20 features - amino acid composition
   aa_comp <- lapply(seq_along(seqs), function(i) {
-    data.frame(id = names(seqs[i]),
+    data.frame(ID = names(seqs[i]),
                t(as.matrix(table(seqs[[i]])/length(seqs[[i]]))))
   }) %>% bind_rows()
   aa_comp[is.na(aa_comp)] <- 0
@@ -89,7 +89,7 @@ generate_features <- function(sequence_file) {
     }) %>% bind_rows()
   }) %>% bind_cols()
   bind_cols(aa_comp, gm_coefficients) %>% 
-    mutate(target = as.factor(ifelse(grepl("AMP=1", id), 1, 0)))
+    mutate(target = as.factor(ifelse(grepl("AMP=1", ID), 1, 0)))
 }
 
 
@@ -102,13 +102,13 @@ trained_rf <- rf(formula = target ~ .,
                  control = Weka_control(I = 500, K = 6))
 
 preds <- predict(trained_rf, 
-                 select(test_df, -c("id", "target")),
+                 select(test_df, -c("ID", "target")),
                  type = "probability") %>% 
   as.data.frame() %>% 
   mutate(prediction = ifelse(`1` > 0.5, 1, 0)) 
 
-res <- bind_cols(test_df[, c("id", "target")],
+res <- bind_cols(test_df[, c("ID", "target")],
                  preds[, c("prediction", "1")]) 
-colnames(res) <- c("id", "target", "prediction", "probability")
+colnames(res) <- c("ID", "target", "prediction", "probability")
 
 write.csv(res, args[3], row.names = FALSE)

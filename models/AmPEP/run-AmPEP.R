@@ -55,8 +55,8 @@ prepare_features <- function(input_file) {
   ret <- do.call(cbind, ret)
   colnames(ret) <- paste0(rep(names(groupings), each = 5*3), "_", colnames(ret))
   
-  bind_cols(ret, id = sequences_df[["name"]]) %>%
-    select(id,
+  bind_cols(ret, ID = sequences_df[["name"]]) %>%
+    select(ID,
            charge_C2_first, charge_C3_first, charge_C3_percent25,
            charge_C2_percent50, charge_C3_percent50, charge_C1_percent75,
            charge_C3_percent75, charge_C2_percent100, charge_C3_percent100,
@@ -69,22 +69,22 @@ prepare_features <- function(input_file) {
            solvent_accessibility_C1_first, solvent_accessibility_C3_first,
            solvent_accessibility_C1_percent50, solvent_accessibility_C2_percent100
     ) %>%
-    mutate(target = as.factor(ifelse(grepl("AMP=1", id), 1, 0)))
+    mutate(target = as.factor(ifelse(grepl("AMP=1", ID), 1, 0)))
 }
 
 train_df <- prepare_features(args[1])
 test_df <- prepare_features(args[2])
 
-trained_rf <- randomForest(target ~ ., select(train_df, -id),
+trained_rf <- randomForest(target ~ ., select(train_df, -ID),
                            ntree = 100)
-preds <- predict(trained_rf, select(test_df, -c(id, target)),
+preds <- predict(trained_rf, select(test_df, -c(ID, target)),
                  type = "prob") %>%
   as_tibble() %>%
   transmute(prediction = ifelse(`1` > 0.5, "1", "0"),
             probability = pmax(`1`, `0`))
 
 res <- test_df %>%
-  select(id, target) %>%
+  select(ID, target) %>%
   bind_cols(preds)
 
 write.csv(res, args[3], row.names = FALSE)
