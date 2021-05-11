@@ -243,9 +243,9 @@ def main():
                                         'Attention': [list(a) for a in attention]})
                 else:
                     out = pd.DataFrame({'id':seq_id,
-                                        'Sequence': peptide,
+                                        'probability': np.nan, #usunięto: #usunięto: 'Sequence': peptide, dodano np.nan
                                         'target': y_score,
-                                        'Prediction': y_class})
+                                        'prediction': y_class})
                 out.to_csv(args.out_dir + '/' + out_name, sep='\t', index=False)
                 print('\nResults saved as: ' + args.out_dir + '/' + out_name)
             
