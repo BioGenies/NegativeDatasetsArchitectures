@@ -236,16 +236,16 @@ def main():
                 print('\nUnable to save! File already existed!')
             else:
                 if args.attention == 'on':
-                    out = pd.DataFrame({'Sequence_ID':seq_id,
+                    out = pd.DataFrame({'id':seq_id,
                                         'Sequence': peptide,
-                                        'Score': y_score,
+                                        'target': y_score,
                                         'Prediction': y_class,
                                         'Attention': [list(a) for a in attention]})
                 else:
-                    out = pd.DataFrame({'Sequence_ID':seq_id,
-                                        'Sequence': peptide,
-                                        'Score': y_score,
-                                        'Prediction': y_class})
+                    out = pd.DataFrame({'id':seq_id,
+                                        'probability': np.nan, #usunięto: #usunięto: 'Sequence': peptide, dodano np.nan
+                                        'target': y_score,
+                                        'prediction': y_class})
                 out.to_csv(args.out_dir + '/' + out_name, sep='\t', index=False)
                 print('\nResults saved as: ' + args.out_dir + '/' + out_name)
             
