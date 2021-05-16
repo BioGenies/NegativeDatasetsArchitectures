@@ -199,12 +199,12 @@ def main():
         random_state=12345,
         n_jobs=8)
     rf_wout_oob.fit(train_features.iloc[:, 3:], train_features['target'])
-
+    pred = rf_wout_oob.predict_proba(test_features.iloc[:, 3:])[:, 1]
     results = pd.DataFrame({
         'ID': test_features.index,
         'target': test_features.target,
-        'prediction': rf_wout_oob.predict_proba(test_features.iloc[:, 3:])[:, 1],
-        'probability': np.nan}
+        'probability': pred,
+        'prediction': np.where(pred > .5, 1, 0)}
     ).reset_index(drop=True)
 
     results.to_csv(args.output, index=False)
