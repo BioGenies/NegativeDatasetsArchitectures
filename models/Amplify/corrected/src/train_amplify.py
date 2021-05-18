@@ -61,7 +61,7 @@ def build_model():
     hidden = Attention(name='Attention')(hidden)
     prediction = Dense(1, activation='sigmoid', name='Output')(hidden)
     model = Model(inputs=inputs, outputs=prediction)
-    adam = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False) #best
+    adam = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, decay=0.0, amsgrad=False) #best
     model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
     return model
 
