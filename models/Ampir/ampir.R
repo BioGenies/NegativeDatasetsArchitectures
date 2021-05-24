@@ -50,5 +50,5 @@ ampir_AMPs <- predict_amps(ampir_test_df, min_len = 4, model = ampir_svm_model)
 ampir_AMPs %>%
   select(one_of("seq_name","Label","prob_AMP")) %>% 
   rename("ID"="seq_name","target"="Label","probability"="prob_AMP") %>% 
-  mutate(prediction=NA) %>% 
-  write.csv(file=output_file,row.names = FALSE,quote = FALSE)
+  mutate(prediction=ifelse(probability > 0.5, TRUE, FALSE)) %>% 
+  write.csv(file=output_file, row.names = FALSE, quote = FALSE)
