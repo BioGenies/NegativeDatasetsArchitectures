@@ -61,7 +61,7 @@ def build_model():
     hidden = Attention(name='Attention')(hidden)
     prediction = Dense(1, activation='sigmoid', name='Output')(hidden)
     model = Model(inputs=inputs, outputs=prediction)
-    adam = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False) #best
+    adam = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, decay=0.0, amsgrad=False) #best
     model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
     return model
 
@@ -154,8 +154,8 @@ def main():
     
     for tr_ens, te_ens in ensemble.split(X_train, y_train):
         model = build_model()
-        early_stopping = EarlyStopping(monitor='val_acc',  min_delta=0.001, patience=50, restore_best_weights=True)
         model.fit(X_train[tr_ens], np.array(y_train[tr_ens]), epochs=1000, batch_size=32, 
+        early_stopping = EarlyStopping(monitor='val_accuracy',  min_delta=0.001, patience=50, restore_best_weights=True)
                   validation_data=(X_train[te_ens], y_train[te_ens]), verbose=2, initial_epoch=0, callbacks=[early_stopping])
         temp_pred_train = model.predict(X_train).flatten() # predicted scores on the [whole] training set from the current model
         indv_pred_train.append(temp_pred_train)
