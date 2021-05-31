@@ -148,6 +148,7 @@ class Attention(Layer):
 
         base_config = super().get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
     
 
 class ScaledDotProductAttention(Layer):
@@ -451,6 +452,75 @@ def one_hot_padding(seq_list,padding):
         feat_list.append(feat)   
     return(np.array(feat_list))
 
+def build_amplify():
+    """
+    Build the complete model architecture
+    """
+    inputs = Input(shape=(MAX_LEN, 20), name='Input')
+    masking = Masking(mask_value=0.0, input_shape=(MAX_LEN, 20), name='Masking')(inputs)
+    hidden = Bidirectional(LSTM(512, use_bias=True, dropout=0.5, return_sequences=True), name='Bidirectional-LSTM')(masking)
+    hidden = MultiHeadAttention(head_num=32, activation='relu', use_bias=True, 
+                                return_multi_attention=False, name='Multi-Head-Attention')(hidden)
+    hidden = Dropout(0.2, name = 'Dropout_1')(hidden)
+    hidden = Attention(name='Attention')(hidden)
+    prediction = Dense(1, activation='sigmoid', name='Output')(hidden)
+    model = Model(inputs=inputs, outputs=prediction)
+    return model
+
+def ensemble(model_list, X):
+    """
+    Ensemble the list of models with processed input X, 
+    Return results for ensemble and individual models
+    """
+    indv_pred = [] # list of predictions from each individual model
+    for i in range(len(model_list)):
+        indv_pred.append(model_list[i].predict(X).flatten())
+    ens_pred = np.mean(np.array(indv_pred), axis=0)
+    return ens_pred, np.array(indv_pred)
+
+def proba_to_class_name(scores):
+    """
+    Turn prediction scores into real class names.
+    If score > 0.5, label the sample as AMP; else non-AMP.
+    Input: scores - scores predicted by the model, 1-d array.
+    Output: an array of class labels.
+    """
+    classes = []
+    for i in range(len(scores)):
+        if scores[i]>0.5:
+            classes.append('AMP')
+        else:
+            classes.append('non-AMP')
+    return np.array(classes)
+
+
+def build_attention():
+    """
+    Build the model architecture for attention output
+    """
+    inputs = Input(shape=(MAX_LEN, 20), name='Input')
+    masking = Masking(mask_value=0.0, input_shape=(MAX_LEN, 20), name='Masking')(inputs)
+    hidden = Bidirectional(LSTM(512, use_bias=True, dropout=0.5, return_sequences=True), name='Bidirectional-LSTM')(masking)
+    hidden = MultiHeadAttention(head_num=32, activation='relu', use_bias=True, 
+                                return_multi_attention=False, name='Multi-Head-Attention')(hidden)
+    hidden = Dropout(0.2, name = 'Dropout_1')(hidden)
+    hidden = Attention(return_attention=True, name='Attention')(hidden)
+    model = Model(inputs=inputs, outputs=hidden)
+    return model
+
+def load_multi_model(sciezka_modelu, architecture):
+    """
+    Load multiple models with the same architecture in one function.
+    Input: list of saved model weights files.
+    Output: list of loaded models.
+    """
+    model_list = []
+    for i in range(len(sciezka_modelu)):
+        model = architecture()
+       # model.load_weights(sciezka_modelu[i], by_name=True)
+        model_list.append(model)
+    return model_list
+
 
 def build_model():
     """
@@ -529,9 +599,12 @@ def main():
     AMP_test = []
     non_AMP_test = []
     ids_test = []
+    peptide = []
     
     for seq_record in SeqIO.parse(test_file, 'fasta'):
             ids_test.append(seq_record.id)
+            peptide.append(seq_record.seq)
+            
             if re.search("AMP=1", seq_record.description):
                 AMP_test.append(str(seq_record.seq))
             elif re.search("AMP=0", seq_record.description):
@@ -549,16 +622,19 @@ def main():
     
     
     ensemble_number = 5 # number of training subsets for ensemble
-    ensemble = StratifiedKFold(n_splits=ensemble_number, shuffle=True, random_state=50)
+    ensemble2 = StratifiedKFold(n_splits=ensemble_number, shuffle=True, random_state=50)
     save_file_num = 0
     
-    for tr_ens, te_ens in ensemble.split(X_train, y_train):
+    model_list2 = []
+    for tr_ens, te_ens in ensemble2.split(X_train, y_train):
             model = build_model()
             early_stopping = EarlyStopping(monitor='val_accuracy',  min_delta=0.001, patience=50, restore_best_weights=True)
             model.fit(X_train[tr_ens], np.array(y_train[tr_ens]), epochs=1000, batch_size=32, 
                       validation_data=(X_train[te_ens], y_train[te_ens]), verbose=2, initial_epoch=0, callbacks=[early_stopping])
             temp_pred_train = model.predict(X_train).flatten() # predicted scores on the [whole] training set from the current model
             indv_pred_train.append(temp_pred_train)
+            model_list2.append(model)
+            
             #save_file_num = save_file_num + 1
             #save_dir = '/home/filip' + '/' + 'model' + '_' + str(save_file_num) + '.h5'
             #save_dir_wt = '/home/filip' + '/' + 'model' + '_weights_' + str(save_file_num) + '.h5'
@@ -572,16 +648,32 @@ def main():
             print('*************************** current model ***************************')
             print('current train acc: ', accuracy_score(y_train[tr_ens], temp_pred_class_train_curr))
             print('current val acc: ', accuracy_score(y_train[te_ens], temp_pred_class_val))
-    
-    
+ 
             preds = model.predict(X_test).flatten()
             pred_class = np.rint(preds)
+
+   
+    
+        
+    models = [model_list2[i] for i in range(len(model_list2))]
+    out_model = load_multi_model(models, build_amplify)
+
+    
+    # generate one-hot encoding input and pad sequences into MAX_LEN long
+    X_seq = one_hot_padding(peptide, MAX_LEN)
+    y_score, y_indv_list = ensemble(out_model, X_seq)
+    y_class = proba_to_class_name(y_score)
+
+
+    #print(y_score)
+    #print(MAX_LEN)
+    #print(models)
     
     results = pd.DataFrame({
             'ID': ids_test,
-            'target': y_test,
-            'prediction': pred_class.astype(np.int32).flatten().tolist(),
-            'probability': preds.flatten().tolist()},
+            'target': y_score,
+            'prediction': y_class,
+            'probability': np.nan,},
         ).reset_index(drop=True)
         
     results.to_csv(out_file, index=False)
