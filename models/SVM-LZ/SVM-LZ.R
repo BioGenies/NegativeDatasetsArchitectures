@@ -11,12 +11,12 @@ read_fasta <- function(file) {
   all_lines <- readLines(file)
   prot_id <- cumsum(grepl("^>", all_lines))
   all_prots <- split(all_lines, prot_id)
-  
+
   seq_list <- lapply(all_prots, function(ith_seq)
     unlist(strsplit(ith_seq[-1], split = "")))
-  
+
   names(seq_list) <- sub(">", "", sapply(all_prots, function(ith_seq) ith_seq[1]), fixed = TRUE)
-  
+
   seq_list
 }
 
@@ -31,15 +31,15 @@ create_target <- function(fasta_file) {
 save_to_LZ_format <- function(sequences, filename) {
   text <- paste0(lapply(sequences, function(x)
     paste0("\n", paste0(x, collapse=""), collapse="")), collapse="")
-  
+
   writeLines(text, filename)
 }
 
 # parse perl script output
 parse_LZ_features <- function(filepath) {
-  
+
   lines <- readLines(filepath)
-  
+
   x <- lapply(lines, function(line) {
     as.numeric(unlist(lapply(str_split((str_split(line, pattern = "\t")[[1]][2:1001]), pattern=":"),
                              function(x) {x[2]}
@@ -47,7 +47,7 @@ parse_LZ_features <- function(filepath) {
     )
     )
   })
-  
+
   do.call(rbind, x)
 }
 
@@ -125,19 +125,19 @@ BLASTP_predictions_train <- BLASTP_predictions_train[BLASTP_predictions_train$Pe
 ## AMP predictions based on alignments for both train and test sequences
 
 BLAST_preds_train <- lapply(unique(BLASTP_predictions_train[["QueryID"]]), function(seq_name) {
-  
+
   blast_pred <- BLASTP_predictions_train[BLASTP_predictions_train[["QueryID"]] == seq_name, ]
   best_subject <- blast_pred[which.max(blast_pred[[metric_column]]), "SubjectID"]
   ifelse(grepl("AMP=1", best_subject), 1, 0)
-  
+
 })
 
 BLAST_preds_test <- lapply(unique(BLASTP_predictions_test[["QueryID"]]), function(seq_name) {
-  
+
   blast_pred <- BLASTP_predictions_test[BLASTP_predictions_test[["QueryID"]] == seq_name, ]
   best_subject <- blast_pred[which.max(blast_pred[[metric_column]]), "SubjectID"]
   ifelse(grepl("AMP=1", best_subject), 1, 0)
-  
+
 })
 
 names(BLAST_preds_train) <- unique(BLASTP_predictions_train[["QueryID"]])
@@ -177,7 +177,7 @@ system("perl models/SVM-LZ/LZ.pl 1")
 system("perl models/SVM-LZ/LZ.pl 2")
 
 # extra sleep time - perl scripts can be finished
-Sys.sleep(900)
+Sys.sleep(1200)
 
 ## parse LZ features
 library(stringr)
