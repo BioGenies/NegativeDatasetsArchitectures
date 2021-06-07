@@ -521,7 +521,7 @@ def load_multi_model(sciezka_modelu, architecture):
         model_list.append(model)
     return model_list
 
-
+MAX_LEN= 400
 def build_model():
     """
     Build and compile the model.
@@ -551,7 +551,7 @@ def predict_by_class(scores):
     return np.array(classes)
 
 
-MAX_LEN=200
+
 def main():
     parser = argparse.ArgumentParser()
     
@@ -579,9 +579,12 @@ def main():
         
         
             # sequences for training sets
-    train_seq = AMP_train + non_AMP_train    
+    train_seq = AMP_train + non_AMP_train
+
+
         # set labels for training sequences
     y_train = np.array([1]*len(AMP_train) + [0]*len(non_AMP_train))
+
         
         # shuffle training set
     train = list(zip(train_seq, y_train))
@@ -589,6 +592,7 @@ def main():
     train_seq, y_train = zip(*train)
     train_seq = list(train_seq)
     y_train = np.array((y_train))
+
         
         # generate one-hot encoding input and pad sequences into MAX_LEN long
     X_train = one_hot_padding(train_seq, MAX_LEN) 
@@ -621,7 +625,7 @@ def main():
     
     
     
-    ensemble_number = 5 # number of training subsets for ensemble
+    ensemble_number = 2 # number of training subsets for ensemble
     ensemble2 = StratifiedKFold(n_splits=ensemble_number, shuffle=True, random_state=50)
     save_file_num = 0
     
@@ -629,7 +633,7 @@ def main():
     for tr_ens, te_ens in ensemble2.split(X_train, y_train):
             model = build_model()
             early_stopping = EarlyStopping(monitor='val_accuracy',  min_delta=0.001, patience=50, restore_best_weights=True)
-            model.fit(X_train[tr_ens], np.array(y_train[tr_ens]), epochs=1000, batch_size=32, 
+            model.fit(X_train[tr_ens], np.array(y_train[tr_ens]), epochs=10, batch_size=32, 
                       validation_data=(X_train[te_ens], y_train[te_ens]), verbose=2, initial_epoch=0, callbacks=[early_stopping])
             temp_pred_train = model.predict(X_train).flatten() # predicted scores on the [whole] training set from the current model
             indv_pred_train.append(temp_pred_train)
@@ -649,8 +653,8 @@ def main():
             print('current train acc: ', accuracy_score(y_train[tr_ens], temp_pred_class_train_curr))
             print('current val acc: ', accuracy_score(y_train[te_ens], temp_pred_class_val))
  
-            preds = model.predict(X_test).flatten()
-            pred_class = np.rint(preds)
+           # preds = model.predict(X_test).flatten()
+           # pred_class = np.rint(preds)
 
    
     
@@ -663,17 +667,18 @@ def main():
     X_seq = one_hot_padding(peptide, MAX_LEN)
     y_score, y_indv_list = ensemble(out_model, X_seq)
     y_class = proba_to_class_name(y_score)
+    #preds = model.predict(X_test).flatten()
 
 
     #print(y_score)
-    #print(MAX_LEN)
+    print(MAX_LEN)
     #print(models)
     
     results = pd.DataFrame({
             'ID': ids_test,
             'target': y_score,
             'prediction': y_class,
-            'probability': np.nan,},
+            'probability': model.predict(X_test).flatten(),},
         ).reset_index(drop=True)
         
     results.to_csv(out_file, index=False)
