@@ -59,7 +59,7 @@ def main():
         elif re.search("AMP=0", s.id):
             y_test.append(0)
      
-    max_length = len(max(X_train, key=len))
+    max_length = 500
     embedding_vector_length = 128
     nbf = 64 		# No. Conv Filters
     flen = 16 		# Conv Filter length 

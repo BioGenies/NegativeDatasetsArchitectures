@@ -488,9 +488,9 @@ def proba_to_class_name(scores):
     classes = []
     for i in range(len(scores)):
         if scores[i]>0.5:
-            classes.append('AMP')
+            classes.append(1)
         else:
-            classes.append('non-AMP')
+            classes.append(0)
     return np.array(classes)
 
 
@@ -521,7 +521,7 @@ def load_multi_model(sciezka_modelu, architecture):
         model_list.append(model)
     return model_list
 
-MAX_LEN= 400
+MAX_LEN = 500
 def build_model():
     """
     Build and compile the model.
@@ -574,9 +574,6 @@ def main():
             elif re.search("AMP=0", seq_record.description):
                 non_AMP_train.append(str(seq_record.seq))
                 
-    
-        
-        
         
             # sequences for training sets
     train_seq = AMP_train + non_AMP_train
@@ -600,29 +597,21 @@ def main():
     indv_pred_train = [] # list of predicted scores for individual models on the training set
     
     #--------- test
-    AMP_test = []
-    non_AMP_test = []
-    ids_test = []
     peptide = []
+    ids_test = []
+    y_test = []
     
     for seq_record in SeqIO.parse(test_file, 'fasta'):
             ids_test.append(seq_record.id)
-            peptide.append(seq_record.seq)
+            peptide.append(str(seq_record.seq))
             
             if re.search("AMP=1", seq_record.description):
-                AMP_test.append(str(seq_record.seq))
+                y_test.append(1)
             elif re.search("AMP=0", seq_record.description):
-                non_AMP_test.append(str(seq_record.seq))
-                   
-    test_seq = AMP_test + non_AMP_test
-    # set labels for test sequences
-    y_test = np.array([1]*len(AMP_test) + [0]*len(non_AMP_test))
-    # generate one-hot encoding input and pad sequences into MAX_LEN long
-    X_test = one_hot_padding(test_seq, MAX_LEN)
-    #indv_pred_test = [] # list of predicted scores for individual models on the test set  
+                y_test.append(0)
+
     
     #------------------------------
-    
     
     
     ensemble_number = 5 # number of training subsets for ensemble
@@ -639,25 +628,6 @@ def main():
             indv_pred_train.append(temp_pred_train)
             model_list2.append(model)
             
-            #save_file_num = save_file_num + 1
-            #save_dir = '/home/filip' + '/' + 'model' + '_' + str(save_file_num) + '.h5'
-            #save_dir_wt = '/home/filip' + '/' + 'model' + '_weights_' + str(save_file_num) + '.h5'
-            #model.save(save_dir) #save
-            #model.save_weights(save_dir_wt) #save
-    
-            # training and validation accuracy for the current model
-            temp_pred_class_train_curr = predict_by_class(model.predict(X_train[tr_ens]).flatten())
-            temp_pred_class_val = predict_by_class(model.predict(X_train[te_ens]).flatten())
-    
-            print('*************************** current model ***************************')
-            print('current train acc: ', accuracy_score(y_train[tr_ens], temp_pred_class_train_curr))
-            print('current val acc: ', accuracy_score(y_train[te_ens], temp_pred_class_val))
- 
-           # preds = model.predict(X_test).flatten()
-           # pred_class = np.rint(preds)
-
-   
-    
         
     models = [model_list2[i] for i in range(len(model_list2))]
     out_model = load_multi_model(models, build_amplify)
@@ -667,18 +637,13 @@ def main():
     X_seq = one_hot_padding(peptide, MAX_LEN)
     y_score, y_indv_list = ensemble(out_model, X_seq)
     y_class = proba_to_class_name(y_score)
-    #preds = model.predict(X_test).flatten()
 
-
-    #print(y_score)
-    print(MAX_LEN)
-    #print(models)
     
     results = pd.DataFrame({
             'ID': ids_test,
-            'target': y_score,
+            'target': y_test,
             'prediction': y_class,
-            'probability': model.predict(X_test).flatten(),},
+            'probability': y_score},
         ).reset_index(drop=True)
         
     results.to_csv(out_file, index=False)
