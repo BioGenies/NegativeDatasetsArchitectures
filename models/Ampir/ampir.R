@@ -14,7 +14,7 @@ ampir_train_df <- read_faa(train_file) %>%
   mutate(Label = ifelse(Label == 1,"Positive","Negative"))  %>% remove_nonstandard_aa()
 
 
-ampir_features <- calculate_features(ampir_train_df)
+ampir_features <- calculate_features(ampir_train_df, min_len = 4)
 ampir_features$Label <- as.factor(ampir_train_df$Label)
 rownames(ampir_features) <- NULL
 
@@ -37,7 +37,7 @@ ampir_test_df <- read_faa(test_file) %>%
   mutate(Label = as.numeric((stringi::stri_match_last_regex(seq_name, "(?<=AMP\\=)0|1") == "1"))) %>%
   mutate(Label = ifelse(Label == 1,"Positive","Negative")) %>% remove_nonstandard_aa()
 
-ampir_featuresTest <- calculate_features(ampir_test_df)
+ampir_featuresTest <- calculate_features(ampir_test_df, min_len = 4)
 ampir_featuresTest$Label <- as.factor(ampir_test_df$Label)
 rownames(ampir_featuresTest) <- NULL
 
