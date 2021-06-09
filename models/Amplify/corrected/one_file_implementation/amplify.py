@@ -521,7 +521,7 @@ def load_multi_model(sciezka_modelu, architecture):
         model_list.append(model)
     return model_list
 
-
+MAX_LEN= 400
 def build_model():
     """
     Build and compile the model.
@@ -551,7 +551,7 @@ def predict_by_class(scores):
     return np.array(classes)
 
 
-MAX_LEN=200
+
 def main():
     parser = argparse.ArgumentParser()
     
@@ -579,9 +579,12 @@ def main():
         
         
             # sequences for training sets
-    train_seq = AMP_train + non_AMP_train    
+    train_seq = AMP_train + non_AMP_train
+
+
         # set labels for training sequences
     y_train = np.array([1]*len(AMP_train) + [0]*len(non_AMP_train))
+
         
         # shuffle training set
     train = list(zip(train_seq, y_train))
@@ -589,6 +592,7 @@ def main():
     train_seq, y_train = zip(*train)
     train_seq = list(train_seq)
     y_train = np.array((y_train))
+
         
         # generate one-hot encoding input and pad sequences into MAX_LEN long
     X_train = one_hot_padding(train_seq, MAX_LEN) 
@@ -649,8 +653,8 @@ def main():
             print('current train acc: ', accuracy_score(y_train[tr_ens], temp_pred_class_train_curr))
             print('current val acc: ', accuracy_score(y_train[te_ens], temp_pred_class_val))
  
-            preds = model.predict(X_test).flatten()
-            pred_class = np.rint(preds)
+           # preds = model.predict(X_test).flatten()
+           # pred_class = np.rint(preds)
 
    
     
@@ -663,17 +667,18 @@ def main():
     X_seq = one_hot_padding(peptide, MAX_LEN)
     y_score, y_indv_list = ensemble(out_model, X_seq)
     y_class = proba_to_class_name(y_score)
+    #preds = model.predict(X_test).flatten()
 
 
     #print(y_score)
-    #print(MAX_LEN)
+    print(MAX_LEN)
     #print(models)
     
     results = pd.DataFrame({
             'ID': ids_test,
             'target': y_score,
             'prediction': y_class,
-            'probability': np.nan,},
+            'probability': model.predict(X_test).flatten(),},
         ).reset_index(drop=True)
         
     results.to_csv(out_file, index=False)
