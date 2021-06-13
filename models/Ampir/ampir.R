@@ -9,12 +9,18 @@ train_file <- args[1]
 test_file <- args[2]
 output_file <- args[3]
 
+used_predictors <- c("Amphiphilicity", "Hydrophobicity", "pI", "Mw", 
+                     "Charge", "Xc1.A", "Xc1.R", "Xc1.N", "Xc1.D", "Xc1.C", "Xc1.E", 
+                     "Xc1.Q", "Xc1.G", "Xc1.H", "Xc1.I", "Xc1.L", "Xc1.K", "Xc1.M", 
+                     "Xc1.F", "Xc1.P", "Xc1.S", "Xc1.T", "Xc1.W", "Xc1.Y", "Xc1.V", 
+                     "Xc2.lambda.1", "Xc2.lambda.2")
+
 ampir_train_df <- read_faa(train_file) %>%
   mutate(Label = as.numeric((stringi::stri_match_last_regex(seq_name, "(?<=AMP\\=)0|1") == "1"))) %>%
   mutate(Label = ifelse(Label == 1,"Positive","Negative"))  %>% remove_nonstandard_aa()
 
 
-ampir_features <- calculate_features(ampir_train_df, min_len = 4)
+ampir_features <- calculate_features(ampir_train_df, min_len = 5)
 ampir_features$Label <- as.factor(ampir_train_df$Label)
 rownames(ampir_features) <- NULL
 
@@ -22,33 +28,21 @@ rownames(ampir_features) <- NULL
 trctrl_prob <- trainControl(method = "repeatedcv", number = 10, repeats = 3,
                             classProbs = TRUE)
 
-#trainIndex <-createDataPartition(y=ampir_features$Label, p=.7, list = FALSE)
-#ampir_featuresTrain <-ampir_features[trainIndex,]
-
 ampir_svm_model <- train(Label~.,
-                         data = ampir_features[,-1], # excluding seq_name column
+                         data = select(ampir_features, c(used_predictors, "Label")), 
                          method="svmRadial",
                          trControl = trctrl_prob,
-                         preProcess = c("center", "scale"),na.action = na.exclude)
+                         preProcess = c("center", "scale"))
 
 
 #---- prediction
 ampir_test_df <- read_faa(test_file) %>%
-  mutate(Label = as.numeric((stringi::stri_match_last_regex(seq_name, "(?<=AMP\\=)0|1") == "1"))) %>%
-  mutate(Label = ifelse(Label == 1,"Positive","Negative")) %>% remove_nonstandard_aa()
+  mutate(Label = as.numeric((stringi::stri_match_last_regex(seq_name, "(?<=AMP\\=)0|1") == "1"))) 
 
-ampir_featuresTest <- calculate_features(ampir_test_df, min_len = 4)
-ampir_featuresTest$Label <- as.factor(ampir_test_df$Label)
-rownames(ampir_featuresTest) <- NULL
+ampir_AMPs <- predict_amps(ampir_test_df, min_len = 5, model = ampir_svm_model)
 
-
-#ampir_pred <- predict(ampir_svm_model, ampir_featuresTest)
-
-ampir_AMPs <- predict_amps(ampir_test_df, min_len = 4, model = ampir_svm_model)
-
-
-ampir_AMPs %>%
-  select(one_of("seq_name","Label","prob_AMP")) %>%
-  rename("ID"="seq_name","target"="Label","probability"="prob_AMP") %>%
-  mutate(prediction=ifelse(probability > 0.5, TRUE, FALSE)) %>%
-  write.csv(file=output_file, row.names = FALSE, quote = FALSE)
+data.frame(ID = ampir_test_df[["seq_name"]],
+           target = ampir_test_df[["Label"]],
+           probability = ampir_AMPs[["prob_AMP"]]) %>% 
+  mutate(prediction = ifelse(probability > 0.5, 1, 0)) %>%
+  write.csv(file = output_file, row.names = FALSE)
