@@ -4,51 +4,30 @@ library(biogram)
 library(ranger)
 library(tidyr)
 library(stringi)
-library(data.table)
 library(seqR)
 #--------------------------------------------------FUNCTIONS
-
-#----get_mers
 
 create_mer_df <- function(seq) 
   do.call(rbind, lapply(1L:nrow(seq), function(i) {
     seq2ngrams(seq[i, ][!is.na(seq[i, ])], 5, a()[-1]) %>% 
       decode_ngrams() %>% 
       unname() %>% 
-      strsplit(split = "") %>% 
-      do.call(rbind, .) %>% 
-      data.frame(stringsAsFactors = FALSE) %>% 
-      mutate(source_peptide = rownames(seq)[i],
-             mer_id = paste0(source_peptide, "m", 1L:nrow(.)))
+      data.frame(seq = .,
+                 source_peptide = rownames(seq)[i],
+                 stringsAsFactors = FALSE)
   }))
 
 
-#--------------------- peptydy (count ampgrams)
 
 count_ampgrams <- function(mer_df, k_vector, gap_list) {
   
-  mer_df[, grep("^X", colnames(mer_df))] %>% 
-    as.matrix() %>% 
+  sapply(mer_df[["seq"]], function(i) strsplit(i, "")[[1]], simplify = FALSE, USE.NAMES = FALSE) %>% 
     count_multimers(k_vector = k_vector,
                     kmer_gaps_list = gap_list,
-                    alphabet = toupper(colnames(aaprop))) %>% 
-    binarize
+                    alphabet = toupper(colnames(aaprop)),
+                    with_kmer_counts = FALSE)
 }
 
-find_ngrams <- function(seq, decoded_ngrams) {
-  
-  end_pos <- 5L:length(seq)
-  start_pos <- end_pos - 4
-  
-  res <- binarize(do.call(rbind, lapply(1L:length(end_pos), function(ith_mer_id) {
-    ten_mer <- paste0(seq[start_pos[ith_mer_id]:end_pos[ith_mer_id]], collapse = "")
-    stri_count(ten_mer, regex = decoded_ngrams)
-  })))
-  
-  res
-}
-
-#---------------------------------------------------------------ANALYZIS
 count_longest <- function(x) {
   splitted_x <- strsplit(x = paste0(as.numeric(x > 0.5), collapse = ""),
                          split = "0")[[1]]
@@ -58,7 +37,7 @@ count_longest <- function(x) {
       len[len > 0]
     }
 }
-#-----------------------------------------
+
 calculate_statistics <- function(pred_mers) {
   (if("fold" %in% colnames(pred_mers)) {
     group_by(pred_mers, source_peptide, target, fold)
@@ -83,6 +62,7 @@ calculate_statistics <- function(pred_mers) {
     mutate(target = factor(target))
 }
 
+
 train_model_peptides <- function(mer_statistics) {
   train_dat <- mer_statistics %>% 
     select(c("target", "fraction_true", "pred_mean", "pred_median",
@@ -95,7 +75,10 @@ train_model_peptides <- function(mer_statistics) {
   model_cv
 }
 
-#------
+extract_imp_ngrams <- function(features, binary_ngrams) {
+  ft <- colnames(binary_ngrams)
+  ft[as.numeric(gsub("feature", "", features))]
+} 
 
 args = commandArgs(trailingOnly=TRUE)
 
@@ -107,71 +90,87 @@ training_data <- read_fasta(train_file) %>%
   list2matrix() %>% 
   create_mer_df()
 
-ngrams12 <- count_ampgrams(training_data, k_vector = c(1, rep(2, 4)), gap_list = list(NULL, NULL, 1, 2, 3))
-ngrams3_1 <- count_ampgrams(training_data, k_vector = c(3, 3), gap_list = list(c(0, 0), c(0, 1)))
-ngrams3_2 <- count_ampgrams(training_data, k_vector = c(3, 3), gap_list = list(c(1, 0), c(1, 1)))
-
-binary_ngrams <-  binarize(cbind(ngrams12, ngrams3_1, ngrams3_2))
+binary_ngrams <-  count_ampgrams(training_data, 
+                                 k_vector = c(1, rep(2, 4), c(rep(3, 4))),
+                                 gap_list = list(NULL, NULL, 1, 2, 3, c(0, 0), c(0, 1), c(1, 0), c(1, 1)))
 
 train_dat <- training_data %>% 
   mutate(target = as.numeric((stringi::stri_match_last_regex(source_peptide, "(?<=AMP\\=)0|1") == "1"))) %>% 
   mutate(target = ifelse(target == 1, TRUE, FALSE))
 
 
-test_bis <- test_features(train_dat[["target"]], binary_ngrams)
+test_bis <- test_features(train_dat[["target"]], binary_ngrams, occurrences = FALSE)
 
-imp_bigrams <- cut(test_bis, breaks = c(0, 0.05, 1))[[1]]
+imp_bigrams <- cut(test_bis, breaks = c(0, 0.05, 1))[[1]] %>% 
+  extract_imp_ngrams(binary_ngrams)
 
-ranger_train_data <- data.frame(as.matrix(binary_ngrams[, imp_bigrams]),
-                                tar = as.factor(train_dat[["target"]]))
+# ranger_train_data <- cbind(as.matrix(binary_ngrams[, imp_bigrams]),
+#                            tar = as.factor(train_dat[["target"]]))
 
-model_cv <- ranger(dependent.variable.name = "tar", data = ranger_train_data, 
+model_cv <- ranger(x = binary_ngrams[, imp_bigrams], y = as.factor(train_dat[["target"]]),
                    write.forest = TRUE, probability = TRUE, num.trees = 2000, 
-                   verbose = FALSE)
+                   verbose = FALSE, seed = 990, save.memory = TRUE)
 
-pred <- predict(model_cv, data.frame(as.matrix(binary_ngrams[, imp_bigrams])))
+preds <- lapply(1:10, function(i) {
+  n <- nrow(binary_ngrams)%/%10
+  b <- seq(0, nrow(binary_ngrams), n)
+  if(i < 10) {
+    predict(model_cv, binary_ngrams[(b[i]+1):(b[i]+n), imp_bigrams])[["predictions"]][, "TRUE"]
+  } else {
+    predict(model_cv, binary_ngrams[(b[10]+1):nrow(binary_ngrams), imp_bigrams])[["predictions"]][, "TRUE"]
+  }
+}) %>% unlist()
 
 mer_df <- train_dat %>% 
-  mutate(pred=pred[["predictions"]][, "TRUE"]) %>% 
-  select(c("source_peptide","mer_id","target", "pred"))
+  mutate(pred = preds) %>% 
+  select(c("source_peptide","target", "pred"))
 
 mer_statistics <- calculate_statistics(mer_df)
 
-peptydovy <- train_model_peptides(mer_statistics)
+peptide_model <- train_model_peptides(mer_statistics)
 
 
 #------------------------test
 
-test_data <- read_fasta(test_file) 
+test_seqs <- read_fasta(test_file) 
 
-ngrams_T <- lapply(names(test_data), function(ith_prot) {
-  find_ngrams(test_data[[ith_prot]], imp_bigrams)
-}) %>% do.call(rbind, .)
-colnames(ngrams_T) <- imp_bigrams
+test_data <- test_seqs[which(!(grepl("AmPEP|ampir-precursor", names(test_seqs))))] %>% 
+  list2matrix() %>% 
+  create_mer_df()
+
+ngrams_T <- count_ampgrams(test_data, 
+                           k_vector = c(1, rep(2, 4), c(rep(3, 4))),
+                           gap_list = list(NULL, NULL, 1, 2, 3, c(0, 0), c(0, 1), c(1, 0), c(1, 1)))
+to_add <- imp_bigrams[which(!(imp_bigrams %in% colnames(ngrams_T)))]
+ngrams_T <- cbind(ngrams_T, matrix(0, ncol = length(to_add), nrow = nrow(ngrams_T), dimnames = list(NULL, to_add)))
 
 test_dat <- test_data %>% 
-  list2matrix() %>% 
-  create_mer_df() %>% 
   mutate(target = as.numeric((stringi::stri_match_last_regex(source_peptide, "(?<=AMP\\=)0|1") == "1"))) %>% 
   mutate(target = ifelse(target == 1,1,0))
 
-pred_T <- predict(model_cv, data.frame(as.matrix(ngrams_T)))
+preds_T <- lapply(1:10, function(i) {
+  n <- nrow(ngrams_T)%/%10
+  b <- seq(0, nrow(ngrams_T), n)
+  if(i < 10) {
+    predict(model_cv, ngrams_T[(b[i]+1):(b[i]+n), imp_bigrams])[["predictions"]][, "TRUE"]
+  } else {
+    predict(model_cv, ngrams_T[(b[10]+1):nrow(ngrams_T), imp_bigrams])[["predictions"]][, "TRUE"]
+  }
+}) %>% unlist()
 
 mer_df_T <- test_dat %>% 
-  mutate(pred=pred_T[["predictions"]][, "TRUE"]) %>% 
-  select(c("source_peptide","mer_id","target", "pred"))
+  mutate(pred = preds_T) %>% 
+  select(c("source_peptide", "target", "pred"))
 
 mer_statistics_T <- calculate_statistics(mer_df_T)
 
-gg <- predict(peptydovy, mer_statistics_T) 
-
-getpred <- as.data.frame(gg$predictions)
+res <- predict(peptide_model, mer_statistics_T)[["predictions"]]
 
 mer_statistics_T %>% 
-  select(c("source_peptide","target")) %>% 
-  mutate(probability=getpred[["TRUE"]]) %>% 
-  rename("ID"="source_peptide") %>% 
-  mutate(prediction=ifelse(probability > 0.5, 1, 0)) %>% 
-  write.csv(file=output_file, row.names = FALSE, quote = FALSE)
+  select(c("source_peptide", "target")) %>% 
+  mutate(probability = res[["TRUE"]]) %>% 
+  rename("ID" = "source_peptide") %>% 
+  mutate(prediction = ifelse(probability > 0.5, 1, 0)) %>% 
+  write.csv(file = output_file, row.names = FALSE)
 
 
