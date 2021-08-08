@@ -164,11 +164,11 @@ mer_df_T <- test_dat %>%
 
 mer_statistics_T <- calculate_statistics(mer_df_T)
 
-res <- predict(peptide_model, mer_statistics_T)[["predictions"]]
+res <- predict(peptide_model, mer_statistics_T)[["predictions"]][, "TRUE"]
 
 mer_statistics_T %>% 
   select(c("source_peptide", "target")) %>% 
-  mutate(probability = res[["TRUE"]]) %>% 
+  mutate(probability = res) %>% 
   rename("ID" = "source_peptide") %>% 
   mutate(prediction = ifelse(probability > 0.5, 1, 0)) %>% 
   write.csv(file = output_file, row.names = FALSE)
