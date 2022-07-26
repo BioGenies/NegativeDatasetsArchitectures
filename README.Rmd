@@ -1,0 +1,24 @@
+---
+output: github_document
+---
+
+# NegativeDatasetsArchitectures
+
+This repository containing all architectures considered in our analysis *Benchmarks in antimicrobial peptide prediction are biased due to the selection of negative data.*
+
+
+```{r echo = FALSE, results = 'asis'}
+source("https://raw.githubusercontent.com/BioGenies/NegativeDatasets/main/docs/rmd_scripts.R")
+cat(negative_sampling_citation())
+```
+
+
+```{r echo = FALSE, results = 'asis'}
+cat(negative_sampling_links())
+```
+
+  
+```{r echo = FALSE, results = 'asis'}
+cat(negative_sampling_contact())
+```
+
