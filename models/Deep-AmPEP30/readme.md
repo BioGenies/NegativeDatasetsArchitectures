@@ -1,0 +1,1 @@
+This folder contains our implementation of DeepAmpPEP30 algorithm described in [Yan J, Bhadra P, Li A, Sethiya P, Qin L, Tai HK, Wong KH, Siu SWI. *Deep-AmPEP30: Improve Short Antimicrobial Peptides Prediction with Deep Learning.* Mol Ther Nucleic Acids. 2020 Jun 5;20:882-894.](https://doi.org/10.1016/j.omtn.2020.05.006)

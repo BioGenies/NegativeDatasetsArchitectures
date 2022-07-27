@@ -1,0 +1,1 @@
+This folder contains our implementation of an algorithm described in [Wang P, Hu L, Liu G, Jiang N, Chen X, Xu J, Zheng W, Li L, Tan M, Chen Z, Song H, Cai YD, Chou KC. *Prediction of antimicrobial peptides based on sequence alignment and feature selection methods.* PLoS One. 2011 Apr 13;6(4):e18476.](https://doi.org/10.1371/journal.pone.0018476)

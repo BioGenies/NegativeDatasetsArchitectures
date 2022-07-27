@@ -1,0 +1,1 @@
+This folder contains a modified version of AMPScanner V2 code provided by the authors and described in [Veltri D, Kamath U, Shehu A. *Deep learning improves antimicrobial peptide recognition.* Bioinformatics. 2018 Aug 15;34(16):2740-2747. ](https://doi.org/10.1093/bioinformatics/bty179)

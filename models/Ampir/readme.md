@@ -1,0 +1,1 @@
+This folder contains a modified version of ampir code provided by the authors and described in [Fingerhut LCHW, Miller DJ, Strugnell JM, Daly NL, Cooke IR. *ampir: an R package for fast genome-wide prediction of antimicrobial peptides.* Bioinformatics. 2021 Jan 29;36(21):5262-5263.](https://doi.org/10.1093/bioinformatics/btaa653)

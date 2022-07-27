@@ -1,0 +1,1 @@
+This folder contains a modified version of AmpGram code provided by the authors and described in [Burdukiewicz M, Sidorczuk K, Rafacz D, Pietluch F, Chilimoniuk J, Rödiger S, Gagat P. *Proteomic Screening for Prediction and Design of Antimicrobial Peptides with AmpGram.* Int J Mol Sci. 2020 Jun 17;21(12):4310.](https://doi.org/10.3390/ijms21124310)

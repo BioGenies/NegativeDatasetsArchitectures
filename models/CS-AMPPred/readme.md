@@ -1,0 +1,1 @@
+This folder contains our implementation of CS-AMPPred algorithm described in [Porto WF, Pires ÁS, Franco OL. *CS-AMPPred: an updated SVM model for antimicrobial activity prediction in cysteine-stabilized peptides.* PLoS One. 2012;7(12):e51444.](https://doi.org/10.1371/journal.pone.0051444)

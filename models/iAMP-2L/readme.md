@@ -1,0 +1,1 @@
+This folder contains our implementation of iAMP-2L algorithm described in [Xiao X, Wang P, Lin WZ, Jia JH, Chou KC. *iAMP-2L: a two-level multi-label classifier for identifying antimicrobial peptides and their functional types.* Anal Biochem. 2013 May 15;436(2):168-77.](https://doi.org/10.1016/j.ab.2013.01.019)

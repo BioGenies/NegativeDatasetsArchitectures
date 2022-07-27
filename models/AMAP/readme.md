@@ -1,0 +1,1 @@
+This folder contains our implementation of AMAP algorithm described in [Gull S, Shamim N, Minhas F. *AMAP: Hierarchical multi-label prediction of biologically active and antimicrobial peptides.* Comput Biol Med. 2019 Apr;107:172-181.](https://doi.org/10.1016/j.compbiomed.2019.02.018)

@@ -1,0 +1,1 @@
+This folder contains a modified version of MACREL code provided by the authors and described in [Santos-Júnior CD, Pan S, Zhao XM, Coelho LP. *Macrel: antimicrobial peptide screening in genomes and metagenomes.* PeerJ. 2020 Dec 18;8:e10555.](https://doi.org/10.7717/peerj.10555)

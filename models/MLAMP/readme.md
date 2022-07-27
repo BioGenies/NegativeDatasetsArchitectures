@@ -1,0 +1,1 @@
+This folder contains our implementation of MLAMP algorithm described in [Lin W, Xu D. *Imbalanced multi-label learning for identifying antimicrobial peptides and their functional types.* Bioinformatics. 2016 Dec 15;32(24):3745-3752.](https://doi.org/10.1093/bioinformatics/btw560)

@@ -1,0 +1,1 @@
+This folder contains a modified version of AmPEPpy code provided by the authors and described in [Lawrence TJ, Carper DL, Spangler MK, Carrell AA, Rush TA, Minter SJ, Weston DJ, Labbé JL. *amPEPpy 1.0: a portable and accurate antimicrobial peptide prediction tool.* Bioinformatics. 2021 Aug 4;37(14):2058-2060.](https://doi.org/10.1093/bioinformatics/btaa917)

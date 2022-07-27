@@ -1,0 +1,1 @@
+This folder contains our implementation of AmPEP algorithm described in [Bhadra P, Yan J, Li J, Fong S, Siu SWI. *AmPEP: Sequence-based prediction of antimicrobial peptides using distribution patterns of amino acid properties and random forest.* Sci Rep. 2018 Jan 26;8(1):1697.](https://doi.org/10.1038/s41598-018-19752-w)
